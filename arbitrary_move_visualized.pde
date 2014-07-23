@@ -1,18 +1,12 @@
 float CHARGE = 25; //<>//
 float SPRINGFORCE = 0.1;
-int NUM_OF_NODES = -1;
+int NUM_OF_TOTAL_NODES = -1;
 float LINKDIST= 40;
-//int myWIDTH = 600;
-//int myHEIGHT = 400;
-int maxConnectedNode = -1;
-int maxDepth = -1; // max tree leaf depth, root (currently maxConnectedNode = 0
-int[] levelWidth; 
-int maxLevlWidth = 0;
 int NODE_REPULSE = 1;
 int WALL_REPULSE = 1;
-float MAXVEL = 1.2; 
+float MAXVEL = 1.2;
 int NODE_SEP_DIST = 200; //canvas computation value
-int NODE_SEP = 50; 
+int NODE_SEP = 50;
 NodeList NL;
 Node root;
 
@@ -22,10 +16,10 @@ void setup() {
 
   background(255);
 
-  //load csv file 
+  //load csv file
   Table adjMatrix = loadTable("adjMatrixFirstMove.csv");
-  NUM_OF_NODES = adjMatrix.getRowCount();
-  NL = new NodeList(NUM_OF_NODES); 
+  NUM_OF_TOTAL_NODES = adjMatrix.getRowCount();
+  NL = new NodeList(NUM_OF_TOTAL_NODES);
   root = NL.makeConnections(adjMatrix);
   NL.assignNodeNames();
   NL.assignParents(root);
@@ -53,7 +47,7 @@ class Node {
 
   float xLoc;
   float yLoc;
-  Node parent; 
+  Node parent;
   int parentNum;
   int nodeNum;
   String nodeName;
@@ -66,7 +60,7 @@ class Node {
 
   Node(int num) {
     connections = new IntList();
-    parentNum = -1; 
+    parentNum = -1;
     nodeNum = num;
     depth = 0;
     loc = new PVector (width/2, height/2);
@@ -75,34 +69,34 @@ class Node {
     nabesDrawn = false;
   }
 
-  //  int findParent() {
-  //    Table adjMatrix = loadTable("adjMatrix.csv");
-  //    int val;
-  //    for (int col = 0; col < 8; col++) {
-  //      val = adjMatrix.getInt(nodeNum, col);
-  //      if ( val == 1) {
-  //        this.parentNum = val;
+  // int findParent() {
+  // Table adjMatrix = loadTable("adjMatrix.csv");
+  // int val;
+  // for (int col = 0; col < 8; col++) {
+  // val = adjMatrix.getInt(nodeNum, col);
+  // if ( val == 1) {
+  // this.parentNum = val;
   //
-  //        break;
-  //      }
-  //    }
-  //    return parentNum;
-  //  }
+  // break;
+  // }
+  // }
+  // return parentNum;
+  // }
 
-  //  void findChildren() {
-  //    int val;
-  //    Table adjMatrix = loadTable("adjMatrix.csv");
-  //    for (int col = (this.nodeNum - 1); col < 8; col++) {
-  //      val = adjMatrix.getInt(nodeNum, col);
-  //      if ( val == 1 ) {
-  //        this.connections.append(val);
-  //      }
-  //    }
-  //  }
+  // void findChildren() {
+  // int val;
+  // Table adjMatrix = loadTable("adjMatrix.csv");
+  // for (int col = (this.nodeNum - 1); col < 8; col++) {
+  // val = adjMatrix.getInt(nodeNum, col);
+  // if ( val == 1 ) {
+  // this.connections.append(val);
+  // }
+  // }
+  // }
 
-  //  void branchConnection() {
-  //    PVector diff = PVector.sub(this.xLoc, this.yLoc,0,0);
-  //  }
+  // void branchConnection() {
+  // PVector diff = PVector.sub(this.xLoc, this.yLoc,0,0);
+  // }
 
   void updateNode() {
     vel.x = constrain(vel.x, -MAXVEL, MAXVEL);
@@ -119,14 +113,14 @@ class Node {
   }
 
   void displayNodeCircle() {
-    //    fill(255);
-    //    //ellipse(loc.x, loc.y, rad*2, rad*2);
-    //    ellipse(loc.x, loc.y, 10, 10); //draw node circle
+    // fill(255);
+    // //ellipse(loc.x, loc.y, rad*2, rad*2);
+    // ellipse(loc.x, loc.y, 10, 10); //draw node circle
     fill(0);
     //text(""+nodeNum, loc.x, loc.y);
     text(nodeName, loc.x, loc.y);
   }
-} 
+}
 
 class NodeList {
   Node[] nodeList; // = new Node[8];
@@ -134,10 +128,11 @@ class NodeList {
   int myHEIGHT = 400;
   int maxConnectedNode = -1;
   int maxDepth = -1; // max tree leaf depth, root (currently maxConnectedNode = 0
-  int[] levelWidth; 
+  int[] levelWidth;
   int maxLevlWidth = 0;
   int[] slot_used;
   int[] levelLocs;
+  int NUM_OF_NODES = -1;
 
   NodeList() {
   }
@@ -147,11 +142,12 @@ class NodeList {
   }
 
   NodeList(int numNodes) {
+    this.NUM_OF_NODES = numNodes;
     nodeList = new Node[numNodes];
   }
 
   Node makeConnections(Table adjMatrix) {
-    Node returnNode = null; 
+    Node returnNode = null;
     levelWidth = new int[NUM_OF_NODES];
     for (int i = 0; i < NUM_OF_NODES; i++) {
       levelWidth[i] = 0;
@@ -159,12 +155,12 @@ class NodeList {
     int val;
     for (int row = 0; row < NUM_OF_NODES; row++) {
       nodeList[row] = new Node(row);
-      for (int col = 0; col < NUM_OF_NODES; col++) {      
-        val = adjMatrix.getInt(row, col); //get value in matrix      
-        print(val); 
+      for (int col = 0; col < NUM_OF_NODES; col++) {
+        val = adjMatrix.getInt(row, col); //get value in matrix
+        print(val);
         if (val == 1) {
           nodeList[row].connections.append(col);
-          if (maxConnectedNode == -1 || 
+          if (maxConnectedNode == -1 ||
             nodeList[row].connections.size() > nodeList[maxConnectedNode].connections.size()) {
             maxConnectedNode = row;
           }
@@ -180,13 +176,13 @@ class NodeList {
     for (int i = 0; i < n.connections.size (); i++) {
       if (n.connections.get(i) != n.parentNum) {
         nodeList[n.connections.get(i)].parent = n;
-        //      println("Just assigned " + n.nodeNum + " as " + n.connections.get(i) + " parent. ");
+        // println("Just assigned " + n.nodeNum + " as " + n.connections.get(i) + " parent. ");
         nodeList[n.connections.get(i)].parentNum = n.nodeNum;
         nodeList[n.connections.get(i)].depth = n.depth + 1;
         levelWidth[nodeList[n.connections.get(i)].depth]++;
         maxLevlWidth = max(maxLevlWidth, levelWidth[nodeList[n.connections.get(i)].depth]);
         maxDepth = max(maxDepth, n.depth + 1);
-        //      println(n.connections.get(i) + " depth = " + nodeList[n.connections.get(i)].depth);
+        // println(n.connections.get(i) + " depth = " + nodeList[n.connections.get(i)].depth);
         assignParents(nodeList[n.connections.get(i)]);
       }
     }
@@ -236,15 +232,15 @@ class NodeList {
     if (n.nabesDrawn) {
       return;
     }
-    //  println("max connected node is " + n.nodeNum);
-    //  println();
+    // println("max connected node is " + n.nodeNum);
+    // println();
     n.drawn = true;
     if (DEBUG) {
-      //    println(n.nodeNum + " connects to: ");
+      // println(n.nodeNum + " connects to: ");
       for (int i = 0; i < n.connections.size (); i++) {
-        //      print (n.connections.get(i) + " ");
+        // print (n.connections.get(i) + " ");
       }
-      //    println();
+      // println();
     }
     for (int i = 0; i < n.connections.size (); i++) {
       Node nabeNode = nodeList[(n.connections.get(i))];
@@ -262,7 +258,7 @@ class NodeList {
     for (int i = 0; i < n.connections.size (); i++) {
       drawNeighbors(nodeList[n.connections.get(i)]);
     }
-    //  println("size = " + n.connections.size());
+    // println("size = " + n.connections.size());
   } // drawNeighbors
 
   // connection between linked haplotypes
@@ -279,19 +275,19 @@ class NodeList {
         PVector diff = PVector.sub(hp.loc, jhp.loc); // Calculate vector pointing away from neighbor
         diff.normalize();
         float distance = PVector.dist(hp.loc, jhp.loc); // weight by Hooke's law
-        //      println("distance = " + distance);
+        // println("distance = " + distance);
         diff.mult( Hooke(distance) );
-        //      println("hook =" + Hooke(distance));
+        // println("hook =" + Hooke(distance));
         hp.vel.add(diff); // forces accelerate the individual
-        //      println(hp.vel);
-        //      println("diff = " +diff );
+        // println(hp.vel);
+        // println("diff = " +diff );
 
         diff = PVector.sub(jhp.loc, hp.loc); // Calculate vector pointing away from neighbor
         diff.normalize();
         distance = PVector.dist(jhp.loc, hp.loc); // weight by Hooke's law
         diff.mult( Hooke(distance) );
         jhp.vel.add(diff); // forces accelerate the individual
-        //      println("hp.loc.x = " + hp.loc.x);
+        // println("hp.loc.x = " + hp.loc.x);
       }
     }
   } // connect
@@ -380,11 +376,11 @@ class NodeList {
     n.displayNodeCircle();
     n.drawn = true;
     if (DEBUG) {
-      //    println(n.nodeNum + " connects to: ");
+      // println(n.nodeNum + " connects to: ");
       for (int i = 0; i < n.connections.size (); i++) {
-        //      print (n.connections.get(i) + " ");
+        // print (n.connections.get(i) + " ");
       }
-      //    println();
+      // println();
     }
     for (int i = 0; i < n.connections.size (); i++) {
       Node nabeNode = nodeList[(n.connections.get(i))];
@@ -399,7 +395,7 @@ class NodeList {
       displayNodes(nodeList[n.connections.get(i)]);
     }
 
-    //  println("size = " + n.connections.size());
+    // println("size = " + n.connections.size());
   } // displayEm
 
   void drawNabeLine (int nabe1, int nabe2) { // draw between nodelist entries
