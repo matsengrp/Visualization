@@ -1,4 +1,4 @@
-float CHARGE = 25; //<>//
+float CHARGE = 25;
 float SPRINGFORCE = 0.1;
 int NUM_OF_TOTAL_NODES = -1;
 float LINKDIST= 40;
@@ -7,8 +7,15 @@ int WALL_REPULSE = 1;
 float MAXVEL = 1.2;
 int NODE_SEP_DIST = 200; //canvas computation value
 int NODE_SEP = 50;
+int ORPHAN = -1;
+int FIRST_DISPLAY = 10000;
+int Time;
+int NUM_OF_NODES = -1;
+Node[] nodeList; // = new Node[8];
+Table pr;
 NodeList NL;
 Node root;
+NodeList subTree = null;
 
 boolean DEBUG = true;
 
@@ -18,6 +25,7 @@ void setup() {
 
   //load csv file
   Table adjMatrix = loadTable("adjMatrixFirstMove.csv");
+  //Table adjMatrix = loadTable("adjMatrix.csv");
   NUM_OF_TOTAL_NODES = adjMatrix.getRowCount();
   NL = new NodeList(NUM_OF_TOTAL_NODES);
   root = NL.makeConnections(adjMatrix);
@@ -29,6 +37,8 @@ void setup() {
   NL.repel();
   NL.unset_drawn(root);
   NL.displayNodes(root);
+  Time = millis();
+  pr  = loadTable("pr.csv"); // node to split and where to rejoin
 } // setup
 
 void draw() {
@@ -38,10 +48,16 @@ void draw() {
   NL.unset_drawn(root);
   NL.updateNodeList();
   NL.displayNodes(root);
+  if (Time > FIRST_DISPLAY) {
+    if (subTree == null) {
+      println("split at time " + Time);
+      subTree = NL.splitUp(pr);
+    }
+    subTree.unset_drawn();
+    subTree.displayNodes( );
+  }
+  Time = millis();
 }
-
-
-
 
 class Node {
 
@@ -60,7 +76,7 @@ class Node {
 
   Node(int num) {
     connections = new IntList();
-    parentNum = -1;
+    parentNum = ORPHAN;
     nodeNum = num;
     depth = 0;
     loc = new PVector (width/2, height/2);
@@ -123,27 +139,72 @@ class Node {
 }
 
 class NodeList {
-  Node[] nodeList; // = new Node[8];
   int myWIDTH = 600;
   int myHEIGHT = 400;
-  int maxConnectedNode = -1;
+  int maxConnectedNode;
   int maxDepth = -1; // max tree leaf depth, root (currently maxConnectedNode = 0
   int[] levelWidth;
   int maxLevlWidth = 0;
   int[] slot_used;
   int[] levelLocs;
-  int NUM_OF_NODES = -1;
+  //int NUM_OF_NODES = -1;
+  // Node rootNode = null;
+  Node rootNode;
 
   NodeList() {
   }
 
   NodeList(Node n) {
-    assignParents(n);
+    rootNode = n;
+    maxConnectedNode = n.nodeNum;
+    //assignParents(n);
   }
 
   NodeList(int numNodes) {
-    this.NUM_OF_NODES = numNodes;
+    maxConnectedNode = -1;
+    NUM_OF_NODES = numNodes;
     nodeList = new Node[numNodes];
+  }
+
+  NodeList splitUp(Table rovingNodes) {
+    String splitNode = rovingNodes.getRow(0).getString(0);
+    Node splitMe = findNode(splitNode, rootNode);
+    Node splitFrom = splitMe.parent;
+    for (int i = 0; i < splitMe.connections.size (); i++) {
+      if (splitMe.connections.get(i) == splitFrom.nodeNum) {
+        splitMe.connections.remove(i);
+      }
+    }
+    for (int i = 0; i < splitFrom.connections.size (); i++) {
+      if (nodeList[splitFrom.connections.get(i)].nodeNum == splitMe.nodeNum) {
+        splitFrom.connections.remove(i);
+        splitMe.parent = null;
+        splitMe.parentNum = ORPHAN;
+        break;
+      }
+    }
+    NodeList newTree = new NodeList(splitMe);
+    return newTree;
+  } // splitUp
+
+  Node findNode(String splitName, Node curNode) {
+    Node pNode = null;
+    if (curNode.nodeName.equals(splitName)) {
+      return curNode;
+    } else {
+      for (int i = 0; i < curNode.connections.size (); i++) {
+        println("Connected Node name = " + 
+          nodeList[curNode.connections.get(i)].nodeName);
+        if (nodeList[curNode.connections.get(i)].nodeName.charAt(0) == splitName.charAt(0)) {
+          //        if (nodeList[curNode.connections.get(i)].nodeName.equals(splitName)) {
+          return nodeList[curNode.connections.get(i)];
+        }
+      }
+    }
+    for (int i = 0; i < curNode.connections.size (); i++) {
+      return findNode(splitName, nodeList[curNode.connections.get(i)]);
+    }
+    return pNode;
   }
 
   Node makeConnections(Table adjMatrix) {
@@ -169,6 +230,7 @@ class NodeList {
       println();
     }
     returnNode = nodeList[maxConnectedNode];
+    rootNode = returnNode;
     return returnNode;
   } // makeConnections
 
@@ -267,6 +329,7 @@ class NodeList {
     for (int i = 0; i < NUM_OF_NODES; i++) {
 
       Node hp = nodeList[i];
+    
       Node jhp = hp.parent;
 
 
@@ -346,6 +409,11 @@ class NodeList {
     }
   } // repel
 
+  void unset_drawn() {
+    println("Marking subtree undrawn.");
+    unset_drawn(rootNode);
+  }
+
   void unset_drawn(Node n) {
     n.drawn = false;
     n.nabesDrawn = false;
@@ -368,6 +436,10 @@ class NodeList {
       nodeList[i].updateNode();
     }
   } // updateNodeList
+
+  void displayNodes() {
+    displayNodes(rootNode);
+  }
 
   void displayNodes (Node n) {
     if (n.nabesDrawn) {
