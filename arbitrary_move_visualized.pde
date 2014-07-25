@@ -73,6 +73,7 @@ class Node {
   IntList connections = new IntList();
   boolean drawn;
   boolean nabesDrawn;
+  Node attachment; 
 
   Node(int num) {
     connections = new IntList();
@@ -168,6 +169,7 @@ class NodeList {
 
   NodeList splitUp(Table rovingNodes) {
     String splitNode = rovingNodes.getRow(0).getString(0);
+    Node laterFriend = findNode(rovingNodes.getRow(0).getString(1),rootNode);
     Node splitMe = findNode(splitNode, rootNode);
     Node splitFrom = splitMe.parent;
     for (int i = 0; i < splitMe.connections.size (); i++) {
@@ -183,7 +185,10 @@ class NodeList {
         break;
       }
     }
+    splitMe.attachment = laterFriend;
+    laterFriend.attachment = splitMe;
     NodeList newTree = new NodeList(splitMe);
+    
     return newTree;
   } // splitUp
 
@@ -327,34 +332,36 @@ class NodeList {
   void connect() {
 
     for (int i = 0; i < NUM_OF_NODES; i++) {
-
       Node hp = nodeList[i];
-    
       Node jhp = hp.parent;
 
-
       if (jhp != null) {
-
-        PVector diff = PVector.sub(hp.loc, jhp.loc); // Calculate vector pointing away from neighbor
-        diff.normalize();
-        float distance = PVector.dist(hp.loc, jhp.loc); // weight by Hooke's law
-        // println("distance = " + distance);
-        diff.mult( Hooke(distance) );
-        // println("hook =" + Hooke(distance));
-        hp.vel.add(diff); // forces accelerate the individual
-        // println(hp.vel);
-        // println("diff = " +diff );
-
-        diff = PVector.sub(jhp.loc, hp.loc); // Calculate vector pointing away from neighbor
-        diff.normalize();
-        distance = PVector.dist(jhp.loc, hp.loc); // weight by Hooke's law
-        diff.mult( Hooke(distance) );
-        jhp.vel.add(diff); // forces accelerate the individual
-        // println("hp.loc.x = " + hp.loc.x);
+        attract(hp, jhp);
+      } 
+      if (hp.attachment != null) {
+        attract(hp,hp.attachment);
       }
     }
   } // connect
 
+  void attract(Node hp, Node jhp) {
+    PVector diff = PVector.sub(hp.loc, jhp.loc); // Calculate vector pointing away from neighbor
+    diff.normalize();
+    float distance = PVector.dist(hp.loc, jhp.loc); // weight by Hooke's law
+    // println("distance = " + distance);
+    diff.mult( Hooke(distance) );
+    // println("hook =" + Hooke(distance));
+    hp.vel.add(diff); // forces accelerate the individual
+    // println(hp.vel);
+    // println("diff = " +diff );
+
+    diff = PVector.sub(jhp.loc, hp.loc); // Calculate vector pointing away from neighbor
+    diff.normalize();
+    distance = PVector.dist(jhp.loc, hp.loc); // weight by Hooke's law
+    diff.mult( Hooke(distance) );
+    jhp.vel.add(diff); // forces accelerate the individual
+  } // attract
+  
   // pairwise repulsion between haplotypes
   void repel() {
 
