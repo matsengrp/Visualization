@@ -1,4 +1,4 @@
-float CHARGE = 25; //<>// //<>//
+float CHARGE = 25;
 float SPRINGFORCE = 0.1;
 int NUM_OF_TOTAL_NODES = -1;
 float LINKDIST= 40;
@@ -10,10 +10,10 @@ int NODE_SEP = 50;
 int ORPHAN = -1;
 int FIRST_DISPLAY = 7000;
 int COLOR_INC = 3000;
-int COLOR_TIME = FIRST_DISPLAY + COLOR_INC;
-int REJOIN_DISPLAY = COLOR_TIME + 5000;
+int COLOR_TIME = FIRST_DISPLAY + COLOR_INC; //color subtree
+int REJOIN_DISPLAY = COLOR_TIME + 5000; //color subtree after regrafting
 int UNCOLOR_TIME = REJOIN_DISPLAY + COLOR_INC;
-int Time;
+int Time; //total time
 int deltaTime;
 color RED = color(255, 0, 0);
 color BLACK = color(0, 0, 0); 
