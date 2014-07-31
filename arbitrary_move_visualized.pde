@@ -1,6 +1,6 @@
-float CHARGE = 25;
+float CHARGE = 25; 
 float SPRINGFORCE = 0.1;
-int NUM_OF_TOTAL_NODES = -1;
+int NUM_OF_INITIAL_NODES = -1;
 float LINKDIST= 40;
 int NODE_REPULSE = 1;
 int WALL_REPULSE = 1;
@@ -10,15 +10,15 @@ int NODE_SEP = 50;
 int ORPHAN = -1;
 int FIRST_DISPLAY = 7000;
 int COLOR_INC = 3000;
-int COLOR_TIME = FIRST_DISPLAY + COLOR_INC; //color subtree
-int REJOIN_DISPLAY = COLOR_TIME + 5000; //color subtree after regrafting
+int COLOR_TIME = FIRST_DISPLAY + COLOR_INC;
+int REJOIN_DISPLAY = COLOR_TIME + 5000;
 int UNCOLOR_TIME = REJOIN_DISPLAY + COLOR_INC;
-int Time; //total time
+int Time;
 int deltaTime;
 color RED = color(255, 0, 0);
 color BLACK = color(0, 0, 0); 
 int NUM_OF_NODES = -1;
-Node[] nodeList; // = new Node[8];
+ArrayList<Node> nodeList; // = new Node[8];
 Node rejoin1;
 Node rejoin2;
 Table pr;
@@ -27,6 +27,7 @@ Node root;
 NodeList subTree = null;
 Node splitNode;
 Node joinNode;
+int nextNewNode =0;
 
 boolean DEBUG = true;
 
@@ -36,8 +37,8 @@ void setup() {
   //load csv file
   Table adjMatrix = loadTable("adjMatrixFirstMove.csv");
   //Table adjMatrix = loadTable("adjMatrix.csv");
-  NUM_OF_TOTAL_NODES = adjMatrix.getRowCount();
-  NL = new NodeList(NUM_OF_TOTAL_NODES);
+  NUM_OF_INITIAL_NODES = adjMatrix.getRowCount();
+  NL = new NodeList(NUM_OF_INITIAL_NODES);
   root = NL.makeConnections(adjMatrix);
   NL.assignNodeNames();
   NL.assignParents(root);
@@ -192,7 +193,7 @@ class NodeList {
   NodeList(int numNodes) {
     maxConnectedNode = -1;
     NUM_OF_NODES = numNodes;
-    nodeList = new Node[numNodes];
+    nodeList = new ArrayList<Node>(numNodes);
   }
 
   Node extractSplitJoin(Table rovingNodes, Node joiner) {
@@ -221,7 +222,7 @@ class NodeList {
     N.colored = true; 
     for (int i = 0; i < N.connections.size (); i++) {
       if (N.connections.get(i) != N.parentNum) {
-        colorNodes(nodeList[N.connections.get(i)], C);
+        colorNodes(nodeList.get(N.connections.get(i)), C);
       }
     }
   } // colorNodes
@@ -238,7 +239,7 @@ class NodeList {
       }
     }
     for (int i = 0; i < splitFrom.connections.size (); i++) {
-      if (nodeList[splitFrom.connections.get(i)].nodeNum == splitMe.nodeNum) {
+      if (nodeList.get(splitFrom.connections.get(i)).nodeNum == splitMe.nodeNum) {
         splitFrom.connections.remove(i);
         splitMe.parent = null;
         splitMe.parentNum = ORPHAN;
@@ -258,11 +259,35 @@ class NodeList {
     //dbug("IN REJOIN\n");
     n1.attachment = null;
     n2.attachment = null;
-    n1.connections.append(n2.nodeNum);
-    n2.connections.append(n1.nodeNum);
+    //find n2's parent
+    Node n2dad = n2.parent;
+    Node newNode = new Node(nodeList.size());
+    newNode.parent = n2dad;
+    newNode.parentNum = n2dad.nodeNum;
+    newNode.nodeName = "N" + nodeList.size();
+    newNode.connections = new IntList();
+    newNode.connections.append(n2.nodeNum);
+    newNode.attachment = n2.attachment;
+    n2.attachment = null;
+    for (int i = 0; i < n2dad.connections.size (); i++) {
+      if (n2dad.connections.get(i) == n2.nodeNum) {
+        n2dad.connections.set(i, newNode.nodeNum);
+      }
+    }
+    for (int i = 0; i < n2.connections.size (); i++) {
+      if (n2.connections.get(i) == n2dad.nodeNum) {
+        n2.connections.set(i, newNode.nodeNum);
+      }
+    }
+    n2.parent = newNode;
+    n2.parentNum = newNode.nodeNum;
+    nodeList.add(newNode);
+    NUM_OF_NODES++;
+    n1.connections.append(newNode.nodeNum);
+    newNode.connections.append(n1.nodeNum);
     Nlist = null;
-    rejoin1.parent = n2;
-    rejoin1.parentNum = n2.nodeNum;
+    rejoin1.parent = newNode;
+    rejoin1.parentNum = newNode.nodeNum;
     splitState = false;
   }
 
@@ -273,15 +298,15 @@ class NodeList {
     } else {
       for (int i = 0; i < curNode.connections.size (); i++) {
         println("Connected Node name = " + 
-          nodeList[curNode.connections.get(i)].nodeName);
-        if (nodeList[curNode.connections.get(i)].nodeName.charAt(0) == splitName.charAt(0)) {
+          nodeList.get(curNode.connections.get(i)).nodeName);
+        if (nodeList.get(curNode.connections.get(i)).nodeName.charAt(0) == splitName.charAt(0)) {
           //        if (nodeList[curNode.connections.get(i)].nodeName.equals(splitName)) {
-          return nodeList[curNode.connections.get(i)];
+          return nodeList.get(curNode.connections.get(i));
         }
       }
     }
     for (int i = 0; i < curNode.connections.size (); i++) {
-      return findNode(splitName, nodeList[curNode.connections.get(i)]);
+      return findNode(splitName, nodeList.get(curNode.connections.get(i)));
     }
     return pNode;
   }
@@ -294,21 +319,21 @@ class NodeList {
     }
     int val;
     for (int row = 0; row < NUM_OF_NODES; row++) {
-      nodeList[row] = new Node(row);
+      nodeList.add(new Node(row));
       for (int col = 0; col < NUM_OF_NODES; col++) {
         val = adjMatrix.getInt(row, col); //get value in matrix
         print(val);
         if (val == 1) {
-          nodeList[row].connections.append(col);
+          nodeList.get(row).connections.append(col);
           if (maxConnectedNode == -1 ||
-            nodeList[row].connections.size() > nodeList[maxConnectedNode].connections.size()) {
+            nodeList.get(row).connections.size() > nodeList.get(maxConnectedNode).connections.size()) {
             maxConnectedNode = row;
           }
         }
       }
       println();
     }
-    returnNode = nodeList[maxConnectedNode];
+    returnNode = nodeList.get(maxConnectedNode);
     rootNode = returnNode;
     return returnNode;
   } // makeConnections
@@ -316,15 +341,15 @@ class NodeList {
   void assignParents(Node n) {
     for (int i = 0; i < n.connections.size (); i++) {
       if (n.connections.get(i) != n.parentNum) {
-        nodeList[n.connections.get(i)].parent = n;
+        nodeList.get(n.connections.get(i)).parent = n;
         // println("Just assigned " + n.nodeNum + " as " + n.connections.get(i) + " parent. ");
-        nodeList[n.connections.get(i)].parentNum = n.nodeNum;
-        nodeList[n.connections.get(i)].depth = n.depth + 1;
-        levelWidth[nodeList[n.connections.get(i)].depth]++;
-        maxLevlWidth = max(maxLevlWidth, levelWidth[nodeList[n.connections.get(i)].depth]);
+        nodeList.get(n.connections.get(i)).parentNum = n.nodeNum;
+        nodeList.get(n.connections.get(i)).depth = n.depth + 1;
+        levelWidth[nodeList.get(n.connections.get(i)).depth]++;
+        maxLevlWidth = max(maxLevlWidth, levelWidth[nodeList.get(n.connections.get(i)).depth]);
         maxDepth = max(maxDepth, n.depth + 1);
         // println(n.connections.get(i) + " depth = " + nodeList[n.connections.get(i)].depth);
-        assignParents(nodeList[n.connections.get(i)]);
+        assignParents(nodeList.get(n.connections.get(i)));
       }
     }
   } // assignParents
@@ -334,8 +359,8 @@ class NodeList {
     TableRow row;
     int NI;
     String NN;
-    for (int nn = 0; nn < nodeList.length; nn++) {
-      nodeList[nn].nodeName = "" + nn;
+    for (int nn = 0; nn < nodeList.size (); nn++) {
+      nodeList.get(nn).nodeName = "" + nn;
     }
     for (int i = 0; i < nodeNames.getRowCount (); i++) {
       //println (nodeList[nodeNames.getRow(i).getInt(0)].nodeNum);
@@ -343,7 +368,7 @@ class NodeList {
       print(row.getInt(0));
       NI = row.getInt(0);
       NN = row.getString(1);
-      nodeList[NI].nodeName = NN;
+      nodeList.get(NI).nodeName = NN;
       println(row.getString(1));
       //println (nodeList[nodeNames.getRow(i).getString(1));
       //println(nodenames.getRow(i).getString(1));
@@ -357,8 +382,8 @@ class NodeList {
     myHEIGHT = maxDepth * NODE_SEP_DIST; //set height
     myWIDTH = maxLevlWidth * NODE_SEP_DIST; //set width
     size(myWIDTH, myHEIGHT);
-    nodeList[maxConnectedNode].loc = new PVector(myWIDTH/2.0, 10);
-    nodeList[maxConnectedNode].displayNodeCircle();
+    nodeList.get(maxConnectedNode).loc = new PVector(myWIDTH/2.0, 10);
+    nodeList.get(maxConnectedNode).displayNodeCircle();
     levelLocs = new int[maxLevlWidth];
     for (int i = 0; i < maxLevlWidth; i++) {
       levelLocs[i] = i*myWIDTH/(i+1);
@@ -368,6 +393,8 @@ class NodeList {
       slot_used[i] = 0;
     }
   } // setDisplayDims
+
+
 
   void drawNeighbors (Node n) {
     if (n.nabesDrawn) {
@@ -384,7 +411,7 @@ class NodeList {
       // println();
     }
     for (int i = 0; i < n.connections.size (); i++) {
-      Node nabeNode = nodeList[(n.connections.get(i))];
+      Node nabeNode = nodeList.get((n.connections.get(i)));
       if (!nabeNode.drawn) { // if neighbor not already drawn
         //if NODE_SEP = 50
         nabeNode.yLoc = (nabeNode.depth + 1) * NODE_SEP; //level 1 is at 50, 2 at 100 (for y coordinate)
@@ -397,7 +424,7 @@ class NodeList {
     }
     n.nabesDrawn = true;
     for (int i = 0; i < n.connections.size (); i++) {
-      drawNeighbors(nodeList[n.connections.get(i)]);
+      drawNeighbors(nodeList.get(n.connections.get(i)));
     }
     // println("size = " + n.connections.size());
   } // drawNeighbors
@@ -406,7 +433,7 @@ class NodeList {
   void connect() {
 
     for (int i = 0; i < NUM_OF_NODES; i++) {
-      Node hp = nodeList[i];
+      Node hp = nodeList.get(i);
       Node jhp = hp.parent;
 
       if (jhp != null) {
@@ -461,15 +488,15 @@ class NodeList {
 
     for (int i = 0; i < NUM_OF_NODES; i++) {
 
-      Node hp = nodeList[i];
+      Node hp = nodeList.get(i);
       PVector push = new PVector(0, 0);
       float distance;
       PVector diff;
 
       // repel from other Haplotypes
       for (int j = 0; j < NUM_OF_NODES; j++) {
-        if (i != j && nodeList[i].attachment != nodeList[j]) {
-          Node jhp = nodeList[j];
+        if (i != j && nodeList.get(i).attachment != nodeList.get(j)) {
+          Node jhp = nodeList.get(j);
           // Calculate vector pointing away from neighbor
           diff = PVector.sub(hp.loc, jhp.loc);
           diff.normalize();
@@ -518,7 +545,7 @@ class NodeList {
     n.drawn = false;
     n.nabesDrawn = false;
     for (int i = 0; i < n.connections.size (); i++) {
-      Node nabeNode = nodeList[(n.connections.get(i))];
+      Node nabeNode = nodeList.get((n.connections.get(i)));
       nabeNode.drawn = false;
       nabeNode.nabesDrawn = false;
       if (n.parent != nabeNode) {
@@ -526,14 +553,14 @@ class NodeList {
       }
     }
     for (int i = 0; i < NUM_OF_NODES; i++) {
-      nodeList[i].updateNode();
+      nodeList.get(i).updateNode();
     }
   } // unset_drawn
 
 
   void updateNodeList() {
     for (int i = 0; i < NUM_OF_NODES; i++) {
-      nodeList[i].updateNode();
+      nodeList.get(i).updateNode();
     }
   } // updateNodeList
 
@@ -555,7 +582,7 @@ class NodeList {
       // println();
     }
     for (int i = 0; i < n.connections.size (); i++) {
-      Node nabeNode = nodeList[(n.connections.get(i))];
+      Node nabeNode = nodeList.get((n.connections.get(i)));
       if (!nabeNode.drawn) { // if neighbor not already drawn
         nabeNode.displayNodeCircle();
         drawNabeLine(n.nodeNum, n.connections.get(i));
@@ -564,15 +591,15 @@ class NodeList {
     }
     n.nabesDrawn = true;
     for (int i = 0; i < n.connections.size (); i++) {
-      displayNodes(nodeList[n.connections.get(i)]);
+      displayNodes(nodeList.get(n.connections.get(i)));
     }
 
     // println("size = " + n.connections.size());
   } // displayEm
 
   void drawNabeLine (int nabe1, int nabe2) { // draw between nodelist entries
-    line(nodeList[nabe1].loc.x, nodeList[nabe1].loc.y, 
-    nodeList[nabe2].loc.x, nodeList[nabe2].loc.y);
+    line(nodeList.get(nabe1).loc.x, nodeList.get(nabe1).loc.y, 
+    nodeList.get(nabe2).loc.x, nodeList.get(nabe2).loc.y);
   } // drawNabeLine
 } // class NodeList
 
@@ -599,3 +626,4 @@ void dbug (String s) {
     println(s);
   }
 }
+
