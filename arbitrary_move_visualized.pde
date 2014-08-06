@@ -28,6 +28,8 @@ NodeList subTree = null;
 Node splitNode;
 Node joinNode;
 int nextNewNode =0;
+int Internal = 0;
+int splitFileRow = 0;
 
 boolean DEBUG = true;
 
@@ -48,9 +50,10 @@ void setup() {
   NL.repel();
   NL.unset_drawn(root);
   NL.displayNodes(root);
-  pr  = loadTable("pr.csv"); // node to split and where to rejoin
-  splitNode = NL.extractSplitJoin(pr, joinNode); // in first column of pr table
+  pr  = loadTable("output.csv"); // node to split and where to rejoin
+  splitNode = NL.extractSplitJoin(pr, joinNode, splitFileRow); // in first column of pr table
   Time = millis();
+  deltaTime = 0;
 } // setup
 
 void draw() {
@@ -60,26 +63,38 @@ void draw() {
   NL.unset_drawn(root);
   NL.updateNodeList();
   NL.displayNodes(root);
-  if (Time > FIRST_DISPLAY) {
-    if (!splitNode.colored && Time < COLOR_TIME) {
+  if (deltaTime > FIRST_DISPLAY) {
+    if (!splitNode.colored && deltaTime < COLOR_TIME) {
       NL.colorize(splitNode, RED);
     }
-    if (Time > COLOR_TIME) { 
+    if (deltaTime > COLOR_TIME) { 
       if (subTree == null && !NL.splitState) {
-        println("split at time " + Time);
+        println("split at time " + deltaTime);
         subTree = NL.splitUp(splitNode, joinNode);
       }
       if (NL.splitState) {
         subTree.unset_drawn();
         subTree.displayNodes( );
-        if (Time > REJOIN_DISPLAY) {
+        if (deltaTime > REJOIN_DISPLAY) {
           NL.rejoin(subTree, rejoin1, rejoin2);
           NL.colorize(splitNode, BLACK);
+          splitFileRow++;
+          println("splitFileRow = " + splitFileRow);
+          if (splitFileRow < pr.getRowCount()) {
+            splitNode = NL.extractSplitJoin(pr, joinNode, splitFileRow);
+          }
+          Time = millis();
+          deltaTime = 0;
+          NL.splitState = false;
+          subTree = null;
         }
       }
     }
   }  
-  Time = millis();
+  // deltaTime = millis();
+  if (splitFileRow < pr.getRowCount()) {
+    deltaTime = millis() - Time;
+  }
 }
 
 class Node {
@@ -112,34 +127,6 @@ class Node {
     colored = false;
   }
 
-  // int findParent() {
-  // Table adjMatrix = loadTable("adjMatrix.csv");
-  // int val;
-  // for (int col = 0; col < 8; col++) {
-  // val = adjMatrix.getInt(nodeNum, col);
-  // if ( val == 1) {
-  // this.parentNum = val;
-  //
-  // break;
-  // }
-  // }
-  // return parentNum;
-  // }
-
-  // void findChildren() {
-  // int val;
-  // Table adjMatrix = loadTable("adjMatrix.csv");
-  // for (int col = (this.nodeNum - 1); col < 8; col++) {
-  // val = adjMatrix.getInt(nodeNum, col);
-  // if ( val == 1 ) {
-  // this.connections.append(val);
-  // }
-  // }
-  // }
-
-  // void branchConnection() {
-  // PVector diff = PVector.sub(this.xLoc, this.yLoc,0,0);
-  // }
 
   void updateNode() {
     vel.x = constrain(vel.x, -MAXVEL, MAXVEL);
@@ -156,12 +143,10 @@ class Node {
   }
 
   void displayNodeCircle() {
-    // fill(255);
-    // //ellipse(loc.x, loc.y, rad*2, rad*2);
-    // ellipse(loc.x, loc.y, 10, 10); //draw node circle
-    //text(""+nodeNum, loc.x, loc.y);
     fill(nodeColor);
-    text(nodeName, loc.x, loc.y);
+    //if (connections.size() == 1 ) {
+      text(nodeName, loc.x, loc.y);
+    //}
     fill(0);
   }
 }
@@ -193,13 +178,15 @@ class NodeList {
   NodeList(int numNodes) {
     maxConnectedNode = -1;
     NUM_OF_NODES = numNodes;
+    splitState = false;
     nodeList = new ArrayList<Node>(numNodes);
   }
 
-  Node extractSplitJoin(Table rovingNodes, Node joiner) {
+  Node extractSplitJoin(Table rovingNodes, Node joiner, int row) {
     //  Node extractSplitJoin(Table rovingNodes) { // global side effect on joinNode
-    String splitNode = rovingNodes.getRow(0).getString(0);
-    Node laterFriend = findNode(rovingNodes.getRow(0).getString(1), rootNode);
+    String splitNode = rovingNodes.getRow(row).getString(0);
+    println("spltnode = " + splitNode);
+    Node laterFriend = findNode(rovingNodes.getRow(row).getString(1), rootNode);
     Node splitMe = findNode(splitNode, rootNode);
     joiner = laterFriend;
     joinNode = laterFriend;
@@ -207,9 +194,6 @@ class NodeList {
   } //extractSplitJoin
 
   void colorize(Node splitMe, color C) {
-    //    String splitNode = rovingNodes.getRow(0).getString(0);
-    //    Node splitMe = findNode(splitNode, rootNode);
-    //    if (!splitMe.colored && splitMe.nodeColor != C) {
     if (splitMe.nodeColor != C) {
       //dbug("IN COLORIZE\n");
       colorNodes(splitMe, C);
@@ -219,7 +203,11 @@ class NodeList {
 
   void colorNodes(Node N, color C) {
     N.nodeColor = C;
-    N.colored = true; 
+    if (C == BLACK) {
+      N.colored = false;
+    } else {
+      N.colored = true;
+    }
     for (int i = 0; i < N.connections.size (); i++) {
       if (N.connections.get(i) != N.parentNum) {
         colorNodes(nodeList.get(N.connections.get(i)), C);
@@ -229,9 +217,6 @@ class NodeList {
 
   NodeList splitUp(Node splitMe, Node laterFriend) {
     //dbug("IN SPLITUP\n");
-    //    String splitNode = rovingNodes.getRow(0).getString(0);
-    //    Node laterFriend = findNode(rovingNodes.getRow(0).getString(1), rootNode);
-    //    Node splitMe = findNode(splitNode, rootNode);
     Node splitFrom = splitMe.parent;
     for (int i = 0; i < splitMe.connections.size (); i++) {
       if (splitMe.connections.get(i) == splitFrom.nodeNum) {
@@ -264,7 +249,8 @@ class NodeList {
     Node newNode = new Node(nodeList.size());
     newNode.parent = n2dad;
     newNode.parentNum = n2dad.nodeNum;
-    newNode.nodeName = "N" + nodeList.size();
+    newNode.nodeName = "N" + Internal; //nodeList.size();
+    Internal++;
     newNode.connections = new IntList();
     newNode.connections.append(n2.nodeNum);
     newNode.attachment = n2.attachment;
@@ -299,7 +285,7 @@ class NodeList {
       for (int i = 0; i < curNode.connections.size (); i++) {
         println("Connected Node name = " + 
           nodeList.get(curNode.connections.get(i)).nodeName);
-        if (nodeList.get(curNode.connections.get(i)).nodeName.charAt(0) == splitName.charAt(0)) {
+        if (nodeList.get(curNode.connections.get(i)).nodeName.equals(splitName)) {
           //        if (nodeList[curNode.connections.get(i)].nodeName.equals(splitName)) {
           return nodeList.get(curNode.connections.get(i));
         }
@@ -370,11 +356,6 @@ class NodeList {
       NN = row.getString(1);
       nodeList.get(NI).nodeName = NN;
       println(row.getString(1));
-      //println (nodeList[nodeNames.getRow(i).getString(1));
-      //println(nodenames.getRow(i).getString(1));
-      //nodeList[nodeNames.getRow(i).getInt(0)].nodeNum = nodeNames.getRow(i).getString(1);
-      //nodeList[nodeNames.getRow(i).getInt(0)]
-      // .nodeName = nodeNames.getRow(i).getString(1)];
     }
   } // assignNodeNames
 
@@ -471,10 +452,7 @@ class NodeList {
     diff.mult( Hooke(distance) );
     // println("hook =" + Hooke(distance));
     hp.vel.add(diff); // forces accelerate the individual
-    //    hp.loc.x = jhp.loc.x; //delete these
-    //    hp.loc.y = jhp.loc.y; //delete this too
-    // println(hp.vel);
-    // println("diff = " +diff );
+
 
     diff = PVector.sub(jhp.loc, hp.loc); // Calculate vector pointing away from neighbor
     diff.normalize();
@@ -576,9 +554,9 @@ class NodeList {
     n.drawn = true;
     if (DEBUG) {
       // println(n.nodeNum + " connects to: ");
-      for (int i = 0; i < n.connections.size (); i++) {
-        // print (n.connections.get(i) + " ");
-      }
+      //for (int i = 0; i < n.connections.size (); i++) {
+      // print (n.connections.get(i) + " ");
+      //}
       // println();
     }
     for (int i = 0; i < n.connections.size (); i++) {
@@ -593,6 +571,7 @@ class NodeList {
     for (int i = 0; i < n.connections.size (); i++) {
       displayNodes(nodeList.get(n.connections.get(i)));
     }
+
 
     // println("size = " + n.connections.size());
   } // displayEm
@@ -626,4 +605,3 @@ void dbug (String s) {
     println(s);
   }
 }
-
