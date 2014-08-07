@@ -16,7 +16,7 @@ int UNCOLOR_TIME = REJOIN_DISPLAY + COLOR_INC;
 int Time;
 int deltaTime;
 color RED = color(255, 0, 0);
-color BLACK = color(0, 0, 0); 
+color BLACK = color(0, 0, 0);
 int NUM_OF_NODES = -1;
 ArrayList<Node> nodeList; // = new Node[8];
 Node rejoin1;
@@ -50,7 +50,7 @@ void setup() {
   NL.repel();
   NL.unset_drawn(root);
   NL.displayNodes(root);
-  pr  = loadTable("output.csv"); // node to split and where to rejoin
+  pr = loadTable("output.csv"); // node to split and where to rejoin
   splitNode = NL.extractSplitJoin(pr, joinNode, splitFileRow); // in first column of pr table
   Time = millis();
   deltaTime = 0;
@@ -67,7 +67,7 @@ void draw() {
     if (!splitNode.colored && deltaTime < COLOR_TIME) {
       NL.colorize(splitNode, RED);
     }
-    if (deltaTime > COLOR_TIME) { 
+    if (deltaTime > COLOR_TIME) {
       if (subTree == null && !NL.splitState) {
         println("split at time " + deltaTime);
         subTree = NL.splitUp(splitNode, joinNode);
@@ -90,7 +90,7 @@ void draw() {
         }
       }
     }
-  }  
+  }
   // deltaTime = millis();
   if (splitFileRow < pr.getRowCount()) {
     deltaTime = millis() - Time;
@@ -113,7 +113,7 @@ class Node {
   boolean drawn;
   boolean colored;
   boolean nabesDrawn;
-  Node attachment; 
+  Node attachment;
 
   Node(int num) {
     connections = new IntList();
@@ -145,7 +145,7 @@ class Node {
   void displayNodeCircle() {
     fill(nodeColor);
     //if (connections.size() == 1 ) {
-      text(nodeName, loc.x, loc.y);
+    text(nodeName, loc.x, loc.y);
     //}
     fill(0);
   }
@@ -183,13 +183,14 @@ class NodeList {
   }
 
   Node extractSplitJoin(Table rovingNodes, Node joiner, int row) {
-    //  Node extractSplitJoin(Table rovingNodes) { // global side effect on joinNode
+    // Node extractSplitJoin(Table rovingNodes) { // global side effect on joinNode
     String splitNode = rovingNodes.getRow(row).getString(0);
     println("spltnode = " + splitNode);
     Node laterFriend = findNode(rovingNodes.getRow(row).getString(1), rootNode);
     Node splitMe = findNode(splitNode, rootNode);
     joiner = laterFriend;
     joinNode = laterFriend;
+    rejoin2 = laterFriend;
     return splitMe;
   } //extractSplitJoin
 
@@ -197,6 +198,7 @@ class NodeList {
     if (splitMe.nodeColor != C) {
       //dbug("IN COLORIZE\n");
       colorNodes(splitMe, C);
+      colorNodes(rejoin2, C);
     }
   } // colorize
 
@@ -207,6 +209,9 @@ class NodeList {
       N.colored = false;
     } else {
       N.colored = true;
+    }
+    if (N == rejoin2) {
+      return;
     }
     for (int i = 0; i < N.connections.size (); i++) {
       if (N.connections.get(i) != N.parentNum) {
@@ -277,25 +282,36 @@ class NodeList {
     splitState = false;
   }
 
+  //  Node findNode(String splitName, Node curNode) {
+  //    Node pNode = null;
+  //    if (curNode.nodeName.equals(splitName)) {
+  //      return curNode;
+  //    } else {
+  //      for (int i = 0; i < curNode.connections.size (); i++) {
+  //        println("Connected Node name = " +
+  //          nodeList.get(curNode.connections.get(i)).nodeName);
+  //        if (nodeList.get(curNode.connections.get(i)).nodeName.equals(splitName)) {
+  //          // if (nodeList[curNode.connections.get(i)].nodeName.equals(splitName)) {
+  //          return nodeList.get(curNode.connections.get(i));
+  //        }
+  //      }
+  //    }
+  //    for (int i = 0; i < curNode.connections.size (); i++) {
+  //      if (curNode.connections.get(i) != curNode.parentNum) {
+  //        return findNode(splitName, nodeList.get(curNode.connections.get(i)));
+  //      }
+  //    }
+  //    return pNode;
+  //  }
+
   Node findNode(String splitName, Node curNode) {
-    Node pNode = null;
-    if (curNode.nodeName.equals(splitName)) {
-      return curNode;
-    } else {
-      for (int i = 0; i < curNode.connections.size (); i++) {
-        println("Connected Node name = " + 
-          nodeList.get(curNode.connections.get(i)).nodeName);
-        if (nodeList.get(curNode.connections.get(i)).nodeName.equals(splitName)) {
-          //        if (nodeList[curNode.connections.get(i)].nodeName.equals(splitName)) {
-          return nodeList.get(curNode.connections.get(i));
-        }
+    for (int i=0; i < nodeList.size (); i++) {
+      if (nodeList.get(i).nodeName.equals(splitName)) {
+        return nodeList.get(i);
       }
     }
-    for (int i = 0; i < curNode.connections.size (); i++) {
-      return findNode(splitName, nodeList.get(curNode.connections.get(i)));
-    }
-    return pNode;
-  }
+    return null;
+  } // findNode
 
   Node makeConnections(Table adjMatrix) {
     Node returnNode = null;
@@ -419,7 +435,7 @@ class NodeList {
 
       if (jhp != null) {
         attract(hp, jhp);
-      } 
+      }
       if (hp.attachment != null) {
         attractStronger(hp, hp.attachment);
       }
