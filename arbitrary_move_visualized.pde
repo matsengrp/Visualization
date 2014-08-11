@@ -152,12 +152,12 @@ class Node {
   } // updateNode
 
 
-  void displayBranch(PVector endLoc) {
-    stroke(0);
-    strokeWeight(10);
-    //line(loc.x, loc.y, parent.loc.x, parent.loc.y);
-    line(loc.x, loc.y, endLoc.x, endLoc.y); //line connecting nodes
-  }
+  //  void displayBranch(PVector endLoc) {
+  //    stroke(0);
+  //    strokeWeight(10);
+  //    //line(loc.x, loc.y, parent.loc.x, parent.loc.y);
+  //    line(loc.x, loc.y, endLoc.x, endLoc.y); //line connecting nodes
+  //  }
 
 
   void displayNodeCircle() {
@@ -637,8 +637,14 @@ class NodeList {
 
 
   void drawNabeLine (int nabe1, int nabe2) { // draw between nodelist entries
-    line(nodeList.get(nabe1).loc.x, nodeList.get(nabe1).loc.y, 
-    nodeList.get(nabe2).loc.x, nodeList.get(nabe2).loc.y);
+    stroke(BLACK);
+    if (nodeList.get(nabe1).parent != nodeList.get(nabe2)) {
+      if (nodeList.get(nabe1).nodeColor == nodeList.get(nabe2).nodeColor) {
+        stroke(nodeList.get(nabe1).nodeColor);
+      }
+      line(nodeList.get(nabe1).loc.x, nodeList.get(nabe1).loc.y, 
+      nodeList.get(nabe2).loc.x, nodeList.get(nabe2).loc.y);
+    }
   } // drawNabeLine
 } // class NodeList
 
@@ -666,3 +672,4 @@ void dbug (String s) {
     println(s);
   }
 }
+
