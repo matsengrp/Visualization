@@ -31,8 +31,20 @@ Node joinNode;
 int nextNewNode =0;
 int Internal = 0;
 int splitFileRow = 0;
+boolean frozen = false;
+//int freezeTime;
 boolean DEBUG = true;
 
+void mouseClicked( ) {
+  if (frozen) {
+    frozen = false;
+    Time = millis() + deltaTime;
+    loop();
+  } else {
+    frozen = true;
+    noLoop();
+  }
+} // mouseClicked
 
 void setup() {
   background(255);
@@ -59,43 +71,45 @@ void setup() {
 
 
 void draw() {
-  background(255);
-  NL.connect();
-  NL.repel();
-  NL.unset_drawn(root);
-  NL.updateNodeList();
-  NL.displayNodes(root);
-  if (deltaTime > FIRST_DISPLAY) {
-    if (!splitNode.colored && deltaTime < COLOR_TIME) {
-      NL.colorize(splitNode, RED);
-    }
-    if (deltaTime > COLOR_TIME) {
-      if (subTree == null && !NL.splitState) {
-        println("split at time " + deltaTime);
-        subTree = NL.splitUp(splitNode, joinNode);
+  if (!frozen) {
+    background(255);
+    NL.connect();
+    NL.repel();
+    NL.unset_drawn(root);
+    NL.updateNodeList();
+    NL.displayNodes(root);
+    if (deltaTime > FIRST_DISPLAY) {
+      if (!splitNode.colored && deltaTime < COLOR_TIME) {
+        NL.colorize(splitNode, RED);
       }
-      if (NL.splitState) {
-        subTree.unset_drawn();
-        subTree.displayNodes( );
-        if (deltaTime > REJOIN_DISPLAY) {
-          NL.rejoin(subTree, rejoin1, rejoin2);
-          NL.colorize(splitNode, BLACK);
-          splitFileRow++;
-          println("splitFileRow = " + splitFileRow);
-          if (splitFileRow < pr.getRowCount()) {
-            splitNode = NL.extractSplitJoin(pr, joinNode, splitFileRow);
+      if (deltaTime > COLOR_TIME) {
+        if (subTree == null && !NL.splitState) {
+          println("split at time " + deltaTime);
+          subTree = NL.splitUp(splitNode, joinNode);
+        }
+        if (NL.splitState) {
+          subTree.unset_drawn();
+          subTree.displayNodes( );
+          if (deltaTime > REJOIN_DISPLAY) {
+            NL.rejoin(subTree, rejoin1, rejoin2);
+            NL.colorize(splitNode, BLACK);
+            splitFileRow++;
+            println("splitFileRow = " + splitFileRow);
+            if (splitFileRow < pr.getRowCount()) {
+              splitNode = NL.extractSplitJoin(pr, joinNode, splitFileRow);
+            }
+            Time = millis();
+            deltaTime = 0;
+            NL.splitState = false;
+            subTree = null;
           }
-          Time = millis();
-          deltaTime = 0;
-          NL.splitState = false;
-          subTree = null;
         }
       }
     }
-  }
-  // deltaTime = millis();
-  if (splitFileRow < pr.getRowCount()) {
-    deltaTime = millis() - Time;
+    // deltaTime = millis();
+    if (splitFileRow < pr.getRowCount()) {
+      deltaTime = millis() - Time;
+    }
   }
 }
 
