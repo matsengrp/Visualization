@@ -292,6 +292,7 @@ class NodeList {
     if (n2dad == null) { // n2 is root
       n2.connections.append(newNode.nodeNum);
       NL.rootNode = newNode;
+      root = newNode;
     } else { //n2 is not root => has a parent
       newNode.parent = n2dad;
       newNode.parentNum = n2dad.nodeNum;
@@ -640,3 +641,4 @@ void dbug (String s) {
     println(s);
   }
 }
+
