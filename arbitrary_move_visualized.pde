@@ -152,10 +152,10 @@ class Node {
 
   void displayNodeCircle() {
     fill(nodeColor);
-    if (connections.size() <= 1 ) {
-      textSize(20);
-      text(nodeName, loc.x, loc.y);
-    }
+    //if (connections.size() <= 1 ) {
+    textSize(20);
+    text(nodeName, loc.x, loc.y);
+    // }
     fill(0);
   } //displayNodeCircle
 } //node Class
@@ -280,43 +280,52 @@ class NodeList {
 
 
   void rejoin(NodeList Nlist, Node n1, Node n2) { //regraft subtree
-    //dbug("IN REJOIN\n");
+    //dbug("IN REJOIN\n
+    noLoop();
     n1.attachment = null;
     n2.attachment = null;
     //find n2's parent
     Node n2dad = n2.parent;
     Node newNode = new Node(nodeList.size());
-    newNode.parent = n2dad;
-    newNode.parentNum = n2dad.nodeNum;
     newNode.nodeName = "N" + Internal; //nodeList.size();
     Internal++;
-    newNode.connections = new IntList();
+    if (n2dad == null) { // n2 is root
+      n2.connections.append(newNode.nodeNum);
+      NL.rootNode = newNode;
+    } else { //n2 is not root => has a parent
+      newNode.parent = n2dad;
+      newNode.parentNum = n2dad.nodeNum;
+      newNode.connections = new IntList();
+      for (int i = 0; i < n2dad.connections.size (); i++) {
+        if (n2dad.connections.get(i) == n2.nodeNum) {
+          n2dad.connections.set(i, newNode.nodeNum);
+          newNode.connections.append(n2dad.nodeNum);
+        }
+      }
+      for (int i = 0; i < n2.connections.size (); i++) {
+        if (n2.connections.get(i) == n2dad.nodeNum) {
+          n2.connections.set(i, newNode.nodeNum);
+        }
+      }
+    } //n2 is not root => has a parent
     newNode.connections.append(n2.nodeNum);
     newNode.attachment = n2.attachment;
     n2.attachment = null;
-    for (int i = 0; i < n2dad.connections.size (); i++) {
-      if (n2dad.connections.get(i) == n2.nodeNum) {
-        n2dad.connections.set(i, newNode.nodeNum);
-        newNode.connections.append(n2dad.nodeNum);
-      }
-    }
-    for (int i = 0; i < n2.connections.size (); i++) {
-      if (n2.connections.get(i) == n2dad.nodeNum) {
-        n2.connections.set(i, newNode.nodeNum);
-      }
-    }
     n2.parent = newNode;
     n2.parentNum = newNode.nodeNum;
     nodeList.add(newNode);
     NUM_OF_NODES++;
     n1.connections.append(newNode.nodeNum);
     newNode.connections.append(n1.nodeNum);
-    Nlist = null;
+    Nlist = null; // null out now-rejoined subtree; allow garbage collect
     rejoin1.parent = newNode;
     rejoin1.parentNum = newNode.nodeNum;
     splitState = false;
-  } //rejoin
-  
+    newNode.loc = n1.loc.get();
+    newNode.loc.lerp(n2.loc, 0.5);
+    loop();
+  } //rejoin (...)
+
 
 
   Node findNode(String splitName, Node curNode) {
@@ -441,7 +450,7 @@ class NodeList {
     }
     // println("size = " + n.connections.size());
   } // drawNeighbors
-  
+
 
 
   void connect() { 
