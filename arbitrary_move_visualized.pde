@@ -1,29 +1,28 @@
-float CHARGE = 25;
+float CHARGE = 25; //<>//
 float SPRINGFORCE = 0.1;
 int NUM_OF_INITIAL_NODES = -1;
 float LINKDIST= 40;
 int NODE_REPULSE = 1;
 int WALL_REPULSE = 1;
 float MAXVEL = 1.2;
-int NODE_SEP_DIST = 200; //canvas computation value
+int NODE_SEP_DIST = 125; //canvas computation value
 int NODE_SEP = 50;
 int ORPHAN = -1;
-int FIRST_DISPLAY = 7000;
-int COLOR_INC = 3000;
+int FIRST_DISPLAY = 8000; //7000; //miliseconds
+int COLOR_INC = 3000; //miliseconds
 int COLOR_TIME = FIRST_DISPLAY + COLOR_INC;
 int REJOIN_DISPLAY = COLOR_TIME + 5000;
-int UNCOLOR_TIME = REJOIN_DISPLAY + COLOR_INC;
 int Time;
-int deltaTime;
+int deltaTime; 
 color RED = color(255, 0, 0);
 color BLACK = color(0, 0, 0);
 color BLUE = color(51, 51, 255);
 int NUM_OF_NODES = -1;
 ArrayList<Node> nodeList; // = new Node[8];
-Node rejoin1;
-Node rejoin2;
+Node rejoin1; //root of subtree to be pruned
+Node rejoin2; //root of subtree that is regraft location
 Table pr;
-NodeList NL;
+NodeList NL; //node list of all nodes (both trees, including subtree)
 Node root;
 NodeList subTree = null;
 Node splitNode;
@@ -31,7 +30,8 @@ Node joinNode;
 int nextNewNode =0;
 int Internal = 0;
 int splitFileRow = 0;
-boolean frozen = false;
+boolean frozen = false; //mouse click to play/pause
+boolean MOVE_NEXT = false; // speed up to next move
 boolean DEBUG = true;
 
 void mouseClicked( ) { //pause/play by mouse click
@@ -73,28 +73,42 @@ void draw() {
     background(255);
     NL.connect();
     NL.repel();
-    NL.unset_drawn(root);
+    NL.unset_drawn(root); //set flags to indicate which nodes can be redrawn
     NL.updateNodeList();
     NL.displayNodes(root);
-    if (deltaTime > FIRST_DISPLAY) {
-      if (!splitNode.colored && deltaTime < COLOR_TIME) {
-        NL.colorize(splitNode, RED); //color subtree to split red
+    if (keyPressed) {
+      if (key == 'n' || key == 'N') {
+        MOVE_NEXT = true;
       }
-      if (deltaTime > COLOR_TIME) {
+    }
+    if (deltaTime > FIRST_DISPLAY || MOVE_NEXT) { //if tree has been displayed for FIRST_DISPLAY time
+      if ((!splitNode.colored && !NL.splitState) && 
+       (deltaTime < COLOR_TIME) || MOVE_NEXT) { //if nodes haven't been colored yet
+        NL.colorize(splitNode, RED); //color subtree to split red
+        if (MOVE_NEXT) { //set keypress of n back to false
+          MOVE_NEXT = false;
+          deltaTime = COLOR_TIME;
+          Time = millis() - deltaTime;
+        }
+      }
+      if (deltaTime > COLOR_TIME) { //if time is greater than colored time
         if (subTree == null && !NL.splitState) {
           println("split at time " + deltaTime);
-          subTree = NL.splitUp(splitNode, joinNode);
+          subTree = NL.splitUp(splitNode, joinNode); 
         }
-        if (NL.splitState) {
+        if (NL.splitState) { //if state is split, display pruning 
           subTree.unset_drawn();
           subTree.displayNodes( );
-          if (deltaTime > REJOIN_DISPLAY) {
-            NL.rejoin(subTree, rejoin1, rejoin2);
-            NL.colorize(splitNode, BLACK);
-            splitFileRow++;
+          if (deltaTime > REJOIN_DISPLAY || MOVE_NEXT) { //if delta time is greater than rejoin display time
+            NL.rejoin(subTree, rejoin1, rejoin2); //rejoin subtree to tree
+            NL.colorize(splitNode, BLACK); //color all nodes black
+            splitFileRow++; //next row in output.csv file
             println("splitFileRow = " + splitFileRow);
             if (splitFileRow < pr.getRowCount()) {
               splitNode = NL.extractSplitJoin(pr, joinNode, splitFileRow);
+            }
+            if (MOVE_NEXT) {
+              MOVE_NEXT = false;
             }
             Time = millis();
             deltaTime = 0;
@@ -104,7 +118,6 @@ void draw() {
         }
       }
     }
-    // deltaTime = millis();
     if (splitFileRow < pr.getRowCount()) {
       deltaTime = millis() - Time;
     }
@@ -127,8 +140,8 @@ class Node {
   boolean drawn;
   boolean colored;
   boolean nabesDrawn;
-  boolean dontDraw = false;
   Node attachment;
+  
   Node(int num) {
     connections = new IntList();
     parentNum = ORPHAN;
@@ -152,10 +165,10 @@ class Node {
 
   void displayNodeCircle() {
     fill(nodeColor);
-    //if (connections.size() <= 1 ) {
+    if (connections.size() <= 1 ) {
     textSize(20);
-    text(nodeName, loc.x, loc.y);
-    // }
+    text(nodeName.substring(1), loc.x, loc.y);
+    }
     fill(0);
   } //displayNodeCircle
 } //node Class
@@ -178,7 +191,6 @@ class NodeList {
     rootNode = n;
     maxConnectedNode = n.nodeNum;
     splitState = false;
-    //assignParents(n);
   }
   NodeList(int numNodes) {
     maxConnectedNode = -1;
@@ -186,9 +198,11 @@ class NodeList {
     splitState = false;
     nodeList = new ArrayList<Node>(numNodes);
   }
+  
+  //extracts move from output.csv file 
   Node extractSplitJoin(Table rovingNodes, Node joiner, int row) {
     String splitNode = rovingNodes.getRow(row).getString(0);
-    println("spltnode = " + splitNode);
+    //println("spltnode = " + splitNode);
     Node laterFriend = findNode(rovingNodes.getRow(row).getString(1), rootNode);
     Node splitMe = findNode(splitNode, rootNode);
     joiner = laterFriend;
@@ -200,7 +214,6 @@ class NodeList {
 
   void colorize(Node splitMe, color C) { //determine which color nodes display
     if (splitMe.nodeColor != C) {
-      //dbug("IN COLORIZE\n");
       colorNodes(splitMe, C);
       if (C == BLACK) {
         colorNodes(rejoin2, C);
@@ -233,12 +246,12 @@ class NodeList {
     Node splitFrom = splitMe.parent;
     Node splitKid = null;
     Node splitDad = null;
-    for (int i = 0; i < splitMe.connections.size (); i++) {
+    for (int i = 0; i < splitMe.connections.size (); i++) { //removes connection to splitMe's parent
       if (splitMe.connections.get(i) == splitFrom.nodeNum) {
         splitMe.connections.remove(i);
       }
     }
-    for (int i = 0; i < splitFrom.connections.size (); i++) {
+    for (int i = 0; i < splitFrom.connections.size (); i++) { //removes the connection of parent to splitMe
       if (nodeList.get(splitFrom.connections.get(i)).nodeNum == splitMe.nodeNum) {
         splitFrom.connections.remove(i);
         splitMe.parent = null;
@@ -252,28 +265,27 @@ class NodeList {
     rejoin2 = laterFriend;
     NodeList newTree = new NodeList(splitMe);
     splitState = true;
-    if (splitFrom.connections.size() == 2) {
+    if (splitFrom.connections.size() == 2) { //if connection is degree 2, collapse internal node
       splitKid = nodeList.get(splitFrom.connections.get(0));
-      if (splitKid.parent != splitFrom) {
+      if (splitKid.parent != splitFrom) { //identify parent of node to be removed/collapsed
         splitKid = nodeList.get(splitFrom.connections.get(1));
         splitDad = nodeList.get(splitFrom.connections.get(0));
-      } else {
+      } else { 
         splitDad = nodeList.get(splitFrom.connections.get(1));
       }
     }
-    for (int i = 0; i < splitDad.connections.size (); i++) {
-      if (splitDad.connections.get(i) == splitFrom.nodeNum) {
+    for (int i = 0; i < splitDad.connections.size (); i++) { //loop thru all of connections for parent of node that subtree was pruned
+      if (splitDad.connections.get(i) == splitFrom.nodeNum) { //found connection of former parent to split subtree
         splitDad.connections.set(i, splitKid.nodeNum);
         splitKid.parentNum = splitDad.nodeNum;
         splitKid.parent = splitDad;
-        for (int j = 0; j < splitKid.connections.size (); j++) {
+        for (int j = 0; j < splitKid.connections.size (); j++) { 
           if (splitKid.connections.get(j) == splitFrom.nodeNum) {
             splitKid.connections.set(j, splitDad.nodeNum);
           }
         }
       }
       //splitFrom =null;
-      splitFrom.dontDraw = true;
     }
     return newTree;
   } // splitUp
@@ -285,7 +297,7 @@ class NodeList {
     n1.attachment = null;
     n2.attachment = null;
     //find n2's parent
-    Node n2dad = n2.parent;
+    Node n2dad = n2.parent; //n2 is node that is rejoin location
     Node newNode = new Node(nodeList.size());
     newNode.nodeName = "N" + Internal; //nodeList.size();
     Internal++;
@@ -297,29 +309,29 @@ class NodeList {
       newNode.parent = n2dad;
       newNode.parentNum = n2dad.nodeNum;
       newNode.connections = new IntList();
-      for (int i = 0; i < n2dad.connections.size (); i++) {
+      for (int i = 0; i < n2dad.connections.size (); i++) { //loop through all of n2's parent's connections
         if (n2dad.connections.get(i) == n2.nodeNum) {
           n2dad.connections.set(i, newNode.nodeNum);
           newNode.connections.append(n2dad.nodeNum);
         }
       }
-      for (int i = 0; i < n2.connections.size (); i++) {
+      for (int i = 0; i < n2.connections.size (); i++) { //loop through all of N2's connection
         if (n2.connections.get(i) == n2dad.nodeNum) {
           n2.connections.set(i, newNode.nodeNum);
         }
       }
     } //n2 is not root => has a parent
-    newNode.connections.append(n2.nodeNum);
+    newNode.connections.append(n2.nodeNum); //add N2 to connections list of new node (internal node that is created)
     newNode.attachment = n2.attachment;
     n2.attachment = null;
     n2.parent = newNode;
     n2.parentNum = newNode.nodeNum;
     nodeList.add(newNode);
     NUM_OF_NODES++;
-    n1.connections.append(newNode.nodeNum);
-    newNode.connections.append(n1.nodeNum);
+    n1.connections.append(newNode.nodeNum); //add new node to N1's connection list
+    newNode.connections.append(n1.nodeNum); //vice versa as above
     Nlist = null; // null out now-rejoined subtree; allow garbage collect
-    rejoin1.parent = newNode;
+    rejoin1.parent = newNode; // parent of rejoin1 newNode (aka new internal node)
     rejoin1.parentNum = newNode.nodeNum;
     splitState = false;
     newNode.loc = n1.loc.get();
@@ -329,7 +341,7 @@ class NodeList {
 
 
 
-  Node findNode(String splitName, Node curNode) {
+  Node findNode(String splitName, Node curNode) { //find node in nodeList arary
     for (int i=0; i < nodeList.size (); i++) {
       if (nodeList.get(i).nodeName.equals(splitName)) {
         return nodeList.get(i);
@@ -339,7 +351,7 @@ class NodeList {
   } // findNode
 
 
-  Node makeConnections(Table adjMatrix) {
+  Node makeConnections(Table adjMatrix) { //connects tree from adjacency matrix
     Node returnNode = null;
     levelWidth = new int[NUM_OF_NODES];
     for (int i = 0; i < NUM_OF_NODES; i++) {
@@ -347,7 +359,7 @@ class NodeList {
     }
     int val;
     for (int row = 0; row < NUM_OF_NODES; row++) {
-      nodeList.add(new Node(row));
+      nodeList.add(new Node(row)); //creates new nodes for each row
       for (int col = 0; col < NUM_OF_NODES; col++) {
         val = adjMatrix.getInt(row, col); //get value in matrix
         print(val);
@@ -367,7 +379,7 @@ class NodeList {
   } // makeConnections
 
 
-  void assignParents(Node n) {
+  void assignParents(Node n) { //assigns parents from adjacency matrix
     for (int i = 0; i < n.connections.size (); i++) {
       if (n.connections.get(i) != n.parentNum) {
         nodeList.get(n.connections.get(i)).parent = n;
@@ -632,7 +644,7 @@ float coulomb(float dist) { //Coulomb's Law
   } else {
     force = 10000;
   }
-  return force; //return the force of hooke's law
+  return force ; //return the force of hooke's law
 }
 
 
@@ -641,4 +653,3 @@ void dbug (String s) {
     println(s);
   }
 }
-
