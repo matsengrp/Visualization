@@ -46,6 +46,7 @@ void mouseClicked( ) { //pause/play by mouse click
 } // mouseClicked
 
 void setup() {
+  size(640,480);
   background(255);
   strokeWeight(3);
   //load adjacency matrix
@@ -122,6 +123,7 @@ void draw() {
       deltaTime = millis() - Time;
     }
   }
+  saveFrame();
 }
 
 
@@ -419,7 +421,7 @@ class NodeList {
   void setDisplay() {
     myHEIGHT = maxDepth * NODE_SEP_DIST; //set height
     myWIDTH = maxLevlWidth * NODE_SEP_DIST; //set width
-    size(myWIDTH, myHEIGHT);
+    setSize(myWIDTH, myHEIGHT);
     nodeList.get(maxConnectedNode).loc = new PVector(myWIDTH/2.0, 10);
     nodeList.get(maxConnectedNode).displayNodeCircle();
     levelLocs = new int[maxLevlWidth];

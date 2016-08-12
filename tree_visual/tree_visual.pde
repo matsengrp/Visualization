@@ -19,6 +19,7 @@ boolean DEBUG = true;
 
 
 void setup() {
+	size(640,480);
   background(255);
   //load csv file 
   Table adjMatrix = loadTable("adjMatrix.csv");
@@ -51,7 +52,7 @@ void setup() {
   println();
   myHEIGHT = maxDepth * NODE_SEP_DIST;
   myWIDTH = maxLevlWidth * NODE_SEP_DIST;
-  size(myWIDTH, myHEIGHT);
+  setSize(myWIDTH, myHEIGHT);
   // Start with Node that has most connections
   nodeList[maxConnectedNode].loc = new PVector(myWIDTH/2.0, 10);
   nodeList[maxConnectedNode].displayNodeCircle();
